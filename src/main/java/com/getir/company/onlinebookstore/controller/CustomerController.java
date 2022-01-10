@@ -30,7 +30,7 @@ public class CustomerController extends IRestController {
 	@Autowired
 	private CustomerService service;
 
-	@RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@RequestMapping(path = "/profile", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<OnlineBookStoreResponse<NewCustomerResponse>> addCustomer(HttpServletRequest servletRequest,
 			@RequestBody(required = true) NewCustomerRequest request) {
 		return invokeServiceMethod(servletRequest, request, service::addCustomer);
