@@ -18,6 +18,7 @@ import com.getir.company.onlinebookstore.core.pojo.TokenDto;
 import com.getir.company.onlinebookstore.dao.BookDao;
 import com.getir.company.onlinebookstore.dto.BookDto;
 import com.getir.company.onlinebookstore.dto.BookDto.BookDtoBuilder;
+import com.getir.company.onlinebookstore.dto.BookStockInformationDto;
 import com.getir.company.onlinebookstore.pojo.BookDetails;
 import com.getir.company.onlinebookstore.request.AddBookRequest;
 import com.getir.company.onlinebookstore.request.UpdateBookDetailsRequest;
@@ -40,19 +41,32 @@ public class BookServiceImpl implements BookService {
 		}
 
 		ServiceResponse<AddBookResponse> response = new ServiceResponse<>();
+		List<BookDto> bookDtos = new ArrayList<>();
+		List<BookStockInformationDto> bookStockInformationDtos = new ArrayList<>();
 
-		List<BookDto> bookDtos = request.getBookDetails().stream().map(detail -> {
-			return BookDto.builder().userId(Long.valueOf(tokenDto.getUserId())).id(String.valueOf(UUID.randomUUID()))
-					.name(detail.getName()).description(detail.getDescription()).price(detail.getPrice())
-					.authorName(detail.getAuthorName()).quantity(detail.getQuantity()).build();
-		}).collect(Collectors.toList());
+		for (BookDetails detail : request.getBookDetails()) {
+
+			String bookId = String.valueOf(UUID.randomUUID());
+			bookDtos.add(BookDto.builder().userId(Long.valueOf(tokenDto.getUserId())).id(bookId).name(detail.getName())
+					.description(detail.getDescription()).price(detail.getPrice()).authorName(detail.getAuthorName())
+					.build());
+			bookStockInformationDtos.add(BookStockInformationDto.builder().userId(Long.valueOf(tokenDto.getUserId()))
+					.id(bookId).quantity(detail.getQuantity()).build());
+		}
 
 		List<BookDto> dbResponse = bookDao.addOrUpdateBooks(bookDtos);
+		List<BookStockInformationDto> stockResponse = bookDao.insertBookStockInformation(bookStockInformationDtos);
 
-		List<BookDetails> bookDetails = dbResponse.stream().map(detail -> {
-			return BookDetails.builder().id(detail.getId()).name(detail.getName()).description(detail.getDescription())
-					.price(detail.getPrice()).authorName(detail.getAuthorName()).quantity(detail.getQuantity()).build();
-		}).collect(Collectors.toList());
+		List<BookDetails> bookDetails = new ArrayList<>();
+		for (int i = 0; i < dbResponse.size(); i++) {
+
+			BookDto bookDto = dbResponse.get(i);
+			BookStockInformationDto stockDto = stockResponse.get(i);
+			bookDetails.add(BookDetails.builder().id(bookDto.getId()).name(bookDto.getName())
+					.description(bookDto.getDescription()).price(bookDto.getPrice()).authorName(bookDto.getAuthorName())
+					.quantity(stockDto.getQuantity()).build());
+
+		}
 
 		response.setData(AddBookResponse.builder().bookDetails(bookDetails).build());
 
@@ -70,55 +84,16 @@ public class BookServiceImpl implements BookService {
 
 		ServiceResponse<UpdateBookDetailsResponse> response = new ServiceResponse<>();
 
-		List<String> compositeKeyList = request.getBookDetails().stream().map(BookDetails::getId)
-				.collect(Collectors.toList());
-
-		List<BookDto> dbResponse = bookDao.addOrUpdateBooks(createdBookDetailsWithUpdatedValue(request.getBookDetails(),
-				bookDao.getBooksByUserIdAndId(Long.valueOf(tokenDto.getUserId()), compositeKeyList),
-				tokenDto.getUserId()));
-
-		if (CollectionUtils.isEmpty(dbResponse)) {
-			throw new OnlineBookStoreException(OnlineBookStoreConstant.BOOK_NOT_FOUND, "Book not found.");
-		}
-
-		List<BookDetails> bookDetails = dbResponse.stream().map(detail -> {
-			return BookDetails.builder().id(detail.getId()).name(detail.getName()).description(detail.getDescription())
-					.price(detail.getPrice()).authorName(detail.getAuthorName()).quantity(detail.getQuantity()).build();
+		List<BookStockInformationDto> stockInformation = request.getBookDetails().stream().map(stockToUpdate -> {
+			return BookStockInformationDto.builder().userId(Long.valueOf(tokenDto.getUserId()))
+					.id(stockToUpdate.getId()).quantity(stockToUpdate.getQuantity()).build();
 		}).collect(Collectors.toList());
 
-		response.setData(UpdateBookDetailsResponse.builder().bookDetails(bookDetails).build());
+		bookDao.insertBookStockInformation(stockInformation);
+
 		response.setMessage(BannerMessage.builder().code(OnlineBookStoreConstant.UPDATED_SUCCESSFULLY).build());
 
 		return response;
-	}
-
-	private List<BookDto> createdBookDetailsWithUpdatedValue(List<BookDetails> newValues, List<BookDto> dbResultList,
-			String userId) {
-
-		List<BookDto> results = new ArrayList<>();
-
-		for (BookDto book : dbResultList) {
-			BookDtoBuilder bookDto = BookDto.builder();
-			for (BookDetails newBookDetails : newValues) {
-				if (newBookDetails.getId().equals(book.getId())) {
-					bookDto.id(book.getId());
-					bookDto.userId(Long.valueOf(userId));
-					if (StringUtils.isNotEmpty(newBookDetails.getName()))
-						bookDto.name(newBookDetails.getName());
-					if (StringUtils.isNotEmpty(newBookDetails.getDescription()))
-						bookDto.description(newBookDetails.getDescription());
-					if (StringUtils.isNotEmpty(newBookDetails.getAuthorName()))
-						bookDto.authorName(newBookDetails.getAuthorName());
-					if (newBookDetails.getPrice() >= 0)
-						bookDto.price(newBookDetails.getPrice());
-					if (newBookDetails.getQuantity() >= 0)
-						bookDto.quantity(newBookDetails.getQuantity());
-					break;
-				}
-			}
-			results.add(bookDto.build());
-		}
-		return results;
 	}
 
 }

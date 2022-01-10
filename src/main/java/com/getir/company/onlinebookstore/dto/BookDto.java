@@ -39,7 +39,4 @@ public class BookDto implements Serializable {
 	@Column("author_name")
 	private String authorName;
 
-	@Column
-	private long quantity;
-
 }

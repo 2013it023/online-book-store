@@ -23,14 +23,10 @@ public class OnlineBookStoreConstant {
 	public static final String ORDER_NOT_FOUND = "5003";
 	public static final String BOOK_NOT_FOUND = "5004";
 	public static final String INVALID_DETAILS = "5005";
+	public static final String STOCK_NOT_AVAILABLE = "5006";
 
 	public static final String AUTHORISATION = "Authorization";
 	public static final String TOKEN_PREFIX = "Bearer";
 	public static final String JWT_ENABLED = "Y";
-
-
-
-
-
 
 }

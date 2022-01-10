@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import com.getir.company.onlinebookstore.dao.BookDao;
 import com.getir.company.onlinebookstore.dto.BookDto;
+import com.getir.company.onlinebookstore.dto.BookStockInformationDto;
 
 /**
  * 
@@ -38,6 +39,22 @@ public class BookDaoImpl implements BookDao {
 		return compositeKeyList.stream().map(compositeKey -> {
 			return cassandraTemplate.selectOne(Query.query(Criteria.where("userid").is(userId))
 					.and(Criteria.where("id").is(compositeKey)).withAllowFiltering(), BookDto.class);
+		}).collect(Collectors.toList());
+	}
+
+	@Override
+	public List<BookStockInformationDto> insertBookStockInformation(
+			List<BookStockInformationDto> bookStockInformation) {
+		return bookStockInformation.stream().map(stockDetail -> {
+			return cassandraTemplate.insert(stockDetail);
+		}).collect(Collectors.toList());
+	}
+
+	@Override
+	public List<BookStockInformationDto> getStockDetailsByKey(List<String> indexKeysList) {
+		return indexKeysList.stream().map(key -> {
+			return cassandraTemplate.selectOne(Query.query(Criteria.where("id").is(key)),
+					BookStockInformationDto.class);
 		}).collect(Collectors.toList());
 	}
 

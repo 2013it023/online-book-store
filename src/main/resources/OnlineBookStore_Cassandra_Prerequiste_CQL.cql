@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS getir.book_dto (
 	description text,
 	name text,
 	price bigint,
-	quantity bigint,
 	PRIMARY KEY (userid, id)
 );
 
@@ -61,6 +60,19 @@ CREATE TYPE IF NOT EXISTS getir.payment_information (
 CREATE INDEX IF NOT EXISTS order_details_by_ordered_date_idx ON getir.order_dto (ordered_date);
 
 CREATE INDEX IF NOT EXISTS order_details_by_year_idx ON getir.order_dto (year);
+
+--Create table to maintain the stock quantity
+
+CREATE TABLE IF NOT EXISTS getir.book_stock_information_dto (
+	userid bigint,
+	id text,
+	quantity bigint,
+	PRIMARY KEY (userid, id)
+);
+
+-- Create Index tables
+
+CREATE INDEX IF NOT EXISTS book_stock_details_by_id_idx ON getir.book_stock_information_dto (id);
 
 
 
