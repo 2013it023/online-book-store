@@ -66,8 +66,6 @@ public abstract class IRestController {
 			bookStoreResponse.setBannerMessage(createBannerMessage(response.getMessage()));
 		}
 
-		System.out.println(config.getMessage().size());
-
 		return new ResponseEntity<>(bookStoreResponse, HttpStatus.OK);
 
 	}

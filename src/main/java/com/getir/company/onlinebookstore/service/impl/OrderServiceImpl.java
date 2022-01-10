@@ -1,6 +1,7 @@
 package com.getir.company.onlinebookstore.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,8 +17,10 @@ import com.getir.company.onlinebookstore.core.exception.OnlineBookStoreException
 import com.getir.company.onlinebookstore.core.pojo.BannerMessage;
 import com.getir.company.onlinebookstore.core.pojo.ServiceResponse;
 import com.getir.company.onlinebookstore.core.pojo.TokenDto;
+import com.getir.company.onlinebookstore.dao.BookDao;
 import com.getir.company.onlinebookstore.dao.OrderDao;
 import com.getir.company.onlinebookstore.dto.BookDetails;
+import com.getir.company.onlinebookstore.dto.BookStockInformationDto;
 import com.getir.company.onlinebookstore.dto.OrderDto;
 import com.getir.company.onlinebookstore.dto.OrderDto.OrderDtoBuilder;
 import com.getir.company.onlinebookstore.dto.PaymentInformation;
@@ -34,10 +37,16 @@ public class OrderServiceImpl implements OrderService {
 	@Autowired
 	private OrderDao orderDao;
 
+	@Autowired
+	private BookDao bookDao;
+
 	@Override
 	public ServiceResponse<OrderResponse> createOrder(TokenDto tokenDto, OrderRequest request) {
 
 		ServiceResponse<OrderResponse> response = new ServiceResponse<>();
+
+		List<BookStockInformationDto> exisingStockInfos = validateStockAvailableInformation(request, tokenDto);
+
 		OrderDtoBuilder orderDto = OrderDto.builder();
 		PaymentDetails paymentDetails = request.getPaymentDetails();
 
@@ -68,7 +77,36 @@ public class OrderServiceImpl implements OrderService {
 
 		response.setMessage(BannerMessage.builder().code(OnlineBookStoreConstant.ORDER_CREATED_SUCCESSFULLY).build());
 
+		updateStockInformation(request.getBookDetails(), exisingStockInfos);
+
 		return response;
+	}
+
+	private void updateStockInformation(List<com.getir.company.onlinebookstore.pojo.BookDetails> bookDetails,
+			List<BookStockInformationDto> exisingStockInfos) {
+
+		List<BookStockInformationDto> updatedDto = new ArrayList<>();
+		for (int i = 0; i < exisingStockInfos.size(); i++) {
+			com.getir.company.onlinebookstore.pojo.BookDetails detail = bookDetails.get(i);
+			BookStockInformationDto informationDto = exisingStockInfos.get(i);
+			informationDto.setQuantity(informationDto.getQuantity() - detail.getQuantity());
+			updatedDto.add(informationDto);
+		}
+
+		bookDao.insertBookStockInformation(updatedDto);
+	}
+
+	private List<BookStockInformationDto> validateStockAvailableInformation(OrderRequest request, TokenDto tokenDto) {
+
+		List<BookStockInformationDto> stockDetailsByKey = bookDao.getStockDetailsByKey(
+				request.getBookDetails().stream().map(detail -> detail.getId()).collect(Collectors.toList()));
+
+		stockDetailsByKey.stream().forEach(detail -> {
+			if (detail.getQuantity() <= 0)
+				throw new OnlineBookStoreException(OnlineBookStoreConstant.STOCK_NOT_AVAILABLE, "Stock not available");
+		});
+
+		return stockDetailsByKey;
 	}
 
 	@Override
